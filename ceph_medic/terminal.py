@@ -108,12 +108,13 @@ _level_colors = {
 
 class _Write(object):
 
-    def __init__(self, _writer=None, prefix='', suffix='', clear_line=False, flush=False):
+    def __init__(self, _writer=None, prefix='', suffix='', clear_line=False, flush=False, enable=True):
         self._writer = _writer or sys.stdout
         self.suffix = suffix
         self.prefix = prefix
         self.flush = flush
         self.clear_line = clear_line
+        self.enabled = enable
 
     def bold(self, string):
         self.write(bold(string))
@@ -122,6 +123,8 @@ class _Write(object):
         self.write(string + '\n')
 
     def write(self, line):
+        if not self.enabled:
+            return
         padding = ''
         if self.clear_line:
             if len(line) > 80:

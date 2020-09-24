@@ -1,7 +1,8 @@
+import json
 import sys
 import ceph_medic
 import logging
-from ceph_medic import runner, collector
+from ceph_medic import runner, collector, terminal
 from tambo import Transport
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ check: Run for all the configured nodes in the configuration
 
 Options:
   --ignore              Comma-separated list of errors and warnings to ignore.
-
+  --format              format output (term, json)
 
 Loaded Config Path: {config_path}
 
@@ -56,7 +57,7 @@ Configured Nodes:
         )
 
     def main(self):
-        options = ['--ignore']
+        options = ['--ignore', '--format']
         config_ignores = ceph_medic.config.file.get_list('check', '--ignore')
         parser = Transport(
             self.argv, options=options,
@@ -68,6 +69,10 @@ Configured Nodes:
         # fallback to the configuration if nothing is defined in the CLI
         if not ignored_codes:
             ignored_codes = config_ignores
+
+        output_format=parser.get('--format', 'term')
+        if output_format not in ['term', 'json']:
+            return parser.print_help()
 
         if len(self.argv) < 1:
             return parser.print_help()
@@ -82,11 +87,23 @@ Configured Nodes:
                     node_metadata['container'] = node['container']
                 ceph_medic.metadata['nodes'][daemon].append(node_metadata)
 
-        collector.collect()
-        test = runner.Runner()
-        test.ignore = ignored_codes
+        term_enabled = True if output_format == 'term' else False
+
+        terminal_writer = terminal._Write(enable=term_enabled)
+        terminal_loader = terminal._Write(prefix='\r', clear_line=True, enable=term_enabled)
+
+        collector.collect(term_writer=terminal_writer,
+                          loader=terminal_loader)
+        test = runner.Runner(ignored_codes=ignored_codes,
+                             term_writer=terminal_writer,
+                             term_loader=terminal_loader)
         results = test.run()
-        runner.report(results)
+
+        if term_enabled:
+            results.report()
+        else:
+            terminal._Write().write(json.dumps(ceph_medic.metadata['results']))
+            
         #XXX might want to make this configurable to not bark on warnings for
         # example, setting forcefully for now, but the results object doesn't
         # make a distinction between error and warning (!)

@@ -1,6 +1,7 @@
 import ceph_medic
 from ceph_medic import runner
 from ceph_medic.tests import base_metadata
+from ceph_medic.tests.conftest import FakeWriter
 from textwrap import dedent
 from ceph_medic.util import configuration
 
@@ -36,54 +37,54 @@ class TestReport(object):
     def setup(self):
         runner.metadata = base_metadata
         runner.metadata['nodes'] = {}
-        self.results = runner.Runner()
+        self.results = runner.Runner(term_writer=FakeWriter())
 
-    def test_reports_unhandled_internal_errors(self, terminal):
+    def test_reports_unhandled_internal_errors(self):
         self.results.internal_errors = ['I am an error']
-        runner.report(self.results)
-        assert 'While running checks, ceph-medic had 1 unhandled errors' in terminal.calls[-1]
+        self.results.report()
+        assert 'While running checks, ceph-medic had 1 unhandled errors' in self.results.term_writer.calls[-1]
 
     def test_reports_no_errors(self, terminal):
-        runner.report(self.results)
-        assert terminal.calls[0] == '\n0 passed, on 0 hosts'
+        self.results.report()
+        assert self.results.term_writer.calls[0] == '\n0 passed, on 0 hosts'
 
     def test_reports_warning(self, terminal):
         self.results.warnings = 1
-        runner.report(self.results)
-        assert terminal.calls[0] == '\n0 passed, 1 warning, on 0 hosts'
+        self.results.report()
+        assert self.results.term_writer.calls[0] == '\n0 passed, 1 warning, on 0 hosts'
 
     def test_reports_warnings(self, terminal):
         self.results.warnings = 2
-        runner.report(self.results)
-        assert terminal.calls[0] == '\n0 passed, 2 warnings, on 0 hosts'
+        self.results.report()
+        assert self.results.term_writer.calls[0] == '\n0 passed, 2 warnings, on 0 hosts'
 
     def test_reports_error(self, terminal):
         self.results.errors = 1
-        runner.report(self.results)
-        assert terminal.calls[0] == '\n0 passed, 1 error, on 0 hosts'
+        self.results.report()
+        assert self.results.term_writer.calls[0] == '\n0 passed, 1 error, on 0 hosts'
 
     def test_reports_errors(self, terminal):
         self.results.errors = 2
-        runner.report(self.results)
-        assert terminal.calls[0] == '\n0 passed, 2 errors, on 0 hosts'
+        self.results.report()
+        assert self.results.term_writer.calls[0] == '\n0 passed, 2 errors, on 0 hosts'
 
     def test_reports_error_and_warning(self, terminal):
         self.results.errors = 1
         self.results.warnings = 1
-        runner.report(self.results)
-        assert terminal.calls[0] == '\n0 passed, 1 error, 1 warning, on 0 hosts'
+        self.results.report()
+        assert self.results.term_writer.calls[0] == '\n0 passed, 1 error, 1 warning, on 0 hosts'
 
     def test_reports_errors_and_warnings(self, terminal):
         self.results.errors = 2
         self.results.warnings = 2
-        runner.report(self.results)
-        assert terminal.calls[0] == '\n0 passed, 2 errors, 2 warnings, on 0 hosts'
+        self.results.report()
+        assert self.results.term_writer.calls[0] == '\n0 passed, 2 errors, 2 warnings, on 0 hosts'
 
     def test_reports_internal_errors(self, terminal):
         self.results.internal_errors = ['error 1', 'error 2']
         self.results.warnings = 2
-        runner.report(self.results)
-        assert terminal.calls[0] == '\n0 passed, 2 warnings, 2 internal errors, on 0 hosts'
+        self.results.report()
+        assert self.results.term_writer.calls[0] == '\n0 passed, 2 warnings, 2 internal errors, on 0 hosts'
 
 
 class TestReportBasicOutput(object):
@@ -97,40 +98,40 @@ class TestReportBasicOutput(object):
         ceph_medic.config.file = conf
         runner.metadata = base_metadata
         runner.metadata['cluster_name'] = 'ceph'
-        runner.Runner().run()
+        self.results = runner.Runner(term_writer=FakeWriter()).run()
 
     def teardown(self):
         runner.metadata = base_metadata
 
     def test_has_version(self, terminal):
-        assert 'Version: ' in terminal.get_output()
+        assert 'Version: ' in self.results.term_writer.get_output()
 
     def test_has_cluster_name(self, terminal):
-        assert 'Cluster Name: "ceph"' in terminal.get_output()
+        assert 'Cluster Name: "ceph"' in self.results.term_writer.get_output()
 
     def test_has_no_hosts(self, terminal):
-        assert 'Total hosts: [0]' in terminal.get_output()
+        assert 'Total hosts: [0]' in self.results.term_writer.get_output()
 
     def test_has_a_header(self, terminal):
-        assert '==  Starting remote check session  ==' in terminal.get_output()
+        assert '==  Starting remote check session  ==' in self.results.term_writer.get_output()
 
     def test_has_no_OSDs(self, terminal):
-        assert 'OSDs:    0' in terminal.get_output()
+        assert 'OSDs:    0' in self.results.term_writer.get_output()
 
     def test_has_no_MONs(self, terminal):
-        assert 'MONs:    0' in terminal.get_output()
+        assert 'MONs:    0' in self.results.term_writer.get_output()
 
     def test_has_no_Clients(self, terminal):
-        assert 'Clients:    0' in terminal.get_output()
+        assert 'Clients:    0' in self.results.term_writer.get_output()
 
     def test_has_no_MDSs(self, terminal):
-        assert 'MDSs:    0' in terminal.get_output()
+        assert 'MDSs:    0' in self.results.term_writer.get_output()
 
     def test_has_no_MGRs(self, terminal):
-        assert 'MGRs:       0' in terminal.get_output()
+        assert 'MGRs:       0' in self.results.term_writer.get_output()
 
     def test_has_no_RGWs(self, terminal):
-        assert 'RGWs:    0' in terminal.get_output()
+        assert 'RGWs:    0' in self.results.term_writer.get_output()
 
 
 class TestReportErrors(object):

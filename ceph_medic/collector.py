@@ -112,7 +112,7 @@ def get_path_metadata(conn, path, **kw):
     return {'dirs': dirs, 'files': files}
 
 
-def get_node_metadata(conn, hostname, cluster_nodes):
+def get_node_metadata(conn, hostname, cluster_nodes, loader=loader):
     # "import" the remote functions so that remote calls using the
     # functions can be executed
     conn.import_module(remote.functions)
@@ -145,7 +145,7 @@ def get_node_metadata(conn, hostname, cluster_nodes):
     return node_metadata
 
 
-def collect():
+def collect(term_writer=terminal.write, loader=loader):
     """
     The main collecting entrypoint. This function will call all the pieces
     needed to build the complete metadata set of a remote system so that checks
@@ -194,7 +194,7 @@ def collect():
 
             # send the full node metadata for global scope so that the checks
             # can consume this
-            metadata[node_type][hostname] = get_node_metadata(conn, hostname, cluster_nodes)
+            metadata[node_type][hostname] = get_node_metadata(conn, hostname, cluster_nodes, loader)
             if node_type == 'mons':  # if node type is monitor, admin privileges are most likely authorized
                 if not has_cluster_data:
                     cluster_data = collect_cluster(conn)
@@ -207,7 +207,7 @@ def collect():
         loader.write(terminal.red('Collection failed!') + ' ' *70)
         # TODO: this helps clear out the 'loader' line so that the error looks
         # clean, but this manual clearing should be done automatically
-        terminal.write.raw('')
+        term_writer.raw('')
         raise RuntimeError('All nodes failed to connect. Cannot run any checks')
     if failed_nodes:
         loader.write(terminal.yellow('Collection completed with some failed connections' + ' ' *70 + '\n'))

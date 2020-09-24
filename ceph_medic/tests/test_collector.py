@@ -126,7 +126,7 @@ class TestCollect(object):
             "osds": [{"host": "osd0"}],
         }
         metadata["cluster_name"] = "ceph"
-        def mock_metadata(conn, hostname, cluster_nodes):
+        def mock_metadata(conn, hostname, cluster_nodes, loader):
             return dict(meta="data")
         monkeypatch.setattr(collector, "get_connection",
                             lambda host, container=None: Mock())
